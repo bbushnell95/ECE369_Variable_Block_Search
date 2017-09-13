@@ -776,6 +776,9 @@ print_result:
 vbsme:  
     li      $v0, 0              # reset $v0 and $V1
     li      $v1, 0
+	
+	addi    $sp, $sp, -4    	# Make space on stack
+    sw      $ra, 0($sp)     	# Save return address
 
     # insert your code here
 	
@@ -912,7 +915,6 @@ next_row:
 	slt 	$t6, $t1, $s0		# if new sum is less than old best sum t6 = 1
 	bne 	$t6, $0, new_best	# if new best, then set information accordingly
 	jr		$ra					# if sum is not a new best then go back to where sad_calc was called
-	
 new_best:
 	add		$s0, $t1, $0		# set current best sum 
 	add		$v0, $t8, $0		# set output x to current window location
@@ -925,6 +927,9 @@ match_case:
 	add 	$v1, $0, $0			# in which only one solution would work [0,0]
 	
 finished: 
+    lw      $ra, 0($sp)         # Restore return address
+    addi    $sp, $sp, 4         # Restore stack pointer
+	jr		$ra
 	#all done? need anything here? 
 	
 	
