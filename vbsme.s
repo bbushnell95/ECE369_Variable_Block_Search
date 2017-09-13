@@ -808,6 +808,8 @@ horiz_rt:
 	sub		$s3, $s3, $s1		# minus offset
 	sll		$s3, $s3, 2			# x4 for addressing
 	add 	$s3, $s3, $t0		# set boundary to rightmost desired address
+	beq		$s3, $t0, finished	# if s3 = t0 then everything has been checked
+	
 horiz_rloop:
 	jal 	sad_calc			# calculate the SAD for current window
 	beq		$t0, $s3, vert_dn	# when final calc has occured move to next direction   
@@ -818,9 +820,9 @@ vert_dn:
 	lw 		$s4, 0($a0)			# load the number of rows in given frame
 	sub 	$s4, $s4, $s6		# bottom boundary occurs at frame rows - window rows
 	sub		$s4, $s4, $s2		# minus offset
-	mul  	$t8, $s4, $s7		# t8 becomes the total number of addresses for s4 # of rows
+	mul  	$s4, $s4, $s7		# s4 becomes the total number of addresses for s4 # of rows
 	add		$s4, $s4, $t0		# final boundary is $t0(current address) + total offset addresses
-	
+	beq		$s4, $t0, finished	# if s4 = t0 then everything has been checked
 vert_dloop:	
 	jal 	sad_calc			# calculate the SAD for current window
 	beq		$t0, $s4, horiz_lt	# when final calc has occured move to next direction
@@ -833,6 +835,7 @@ horiz_lt:
 	sub		$s3, $s3, $s1		# minus offset
 	sll		$s3, $s3, 2			# x4 for addressing
 	sub 	$s3, $s3, $t0		# set boundary to leftmost desired address
+	beq		$s3, $t0, finished	# if s3 = t0 then everything has been checked
 horiz_lloop:
 	jal 	sad_calc			# calculate the SAD for current window
 	beq		$t0, $s3, vert_up	# when final calc has occured move to next direction   
@@ -845,7 +848,7 @@ vert_up:
 	sub		$s4, $s4, $s2		# minus offset
 	mul  	$t8, $s4, $s7		# t8 becomes the total number of addresses for s4 # of rows
 	sub		$s4, $s4, $t0		# final boundary is $t0(current address) - total offset addresses
-	
+	beq		$s4, $t0, finished	# if s4 = t0 then everything has been checked
 vert_uloop:	
 	jal 	sad_calc			# calculate the SAD for current window
 	beq		$t0, $s4, horiz_rt	# when final calc has occured move to next direction
