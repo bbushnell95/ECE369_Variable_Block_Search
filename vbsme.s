@@ -778,4 +778,88 @@ vbsme:
     li      $v1, 0
 
     # insert your code here
-   
+	
+	# $a0 = base address of parameters  |   $a1 base of frame [0,0]    |   $a2   base of window [0,0]
+	# $s0 = running sum
+	# $s1 = horiz offset  |   $s2 vertical offset   
+	# $s3 frame cols - window cols - offset   |   $s4 frame rows - window rows - offset
+	# $s5 = window cols   |    $s6 = window rows
+	# $s7 = #cols * 4 (used to go down one element) 
+	# $t0 = base address of moving window
+	# $t1 = counter variable  | $t7 is boundary conditional
+	# $t8 / $t9  = temp vars
+	
+	# can we calculate the last element with 100% confidence?
+	# high and low element div2 gives middle, need to round up or down?
+	# calculate the address at middle lt<->rt and middle up<->dn should be last check?
+	
+	# traversal routine
+	add 	$t0, $a1, $0		# init the moving window register to top left of given frame
+	add 	$s1, $0, $0			# initial offsets are 0
+	add 	$s2, $0, $0			# vert offset
+	lw		$s5, 12($a0)		# load the number of cols in given window
+	lw		$s6, 8($a0)			# load the number of rows in given window
+	add		$s7, $s5, 0			# set s7 to a vertical increment value
+	sll 	$s7, $s7, 2			# s7 now contains the amount of address to skip in order to go down 1 vertically
+	
+horiz_rt:
+	lw 		$s3, 4($a0)			# load the number of cols in given frame
+	sub 	$s3, $s3, $s5		# right boundary occurs at frame cols - window cols
+	sub		$s3, $s3, $s1		# minus offset
+	sll		$s3, $s3, 2			# x4 for addressing
+	add 	$s3, $s3, $t0		# set boundary to rightmost desired address
+horiz_rloop:
+	jal 	sad_calc			# calculate the SAD for current window
+	beq		$t0, $s3, vert_dn	# when final calc has occured move to next direction   
+	addi	$t0, $t0, 4			# move right one step
+	ja		horiz_rloop			# do it again
+	
+vert_dn:
+	lw 		$s4, 0($a0)			# load the number of rows in given frame
+	sub 	$s4, $s4, $s6		# bottom boundary occurs at frame rows - window rows
+	sub		$s4, $s4, $s2		# minus offset
+	mul  	$t8, $s4, $s7		# t8 becomes the total number of addresses for s4 # of rows
+	add		$s4, $s4, $t0		# final boundary is $t0(current address) + total offset addresses
+	
+vert_dloop:	
+	jal 	sad_calc			# calculate the SAD for current window
+	beq		$t0, $s4, horiz_lt	# when final calc has occured move to next direction
+	add		$t0, $t0, $s7		# move down one step
+	ja		vert_dloop			# do it again
+	
+horiz_lt:
+	lw 		$s3, 4($a0)			# load the number of cols in given frame
+	sub 	$s3, $s3, $s5		# left boundary occurs at frame cols - window cols
+	sub		$s3, $s3, $s1		# minus offset
+	sll		$s3, $s3, 2			# x4 for addressing
+	sub 	$s3, $s3, $t0		# set boundary to leftmost desired address
+horiz_lloop:
+	jal 	sad_calc			# calculate the SAD for current window
+	beq		$t0, $s3, vert_up	# when final calc has occured move to next direction   
+	addi	$t0, $t0, -4		# move left one step
+	ja		horiz_rloop			# do it again
+	
+vert_up:
+	lw 		$s4, 0($a0)			# load the number of rows in given frame
+	sub 	$s4, $s4, $s6		# upper boundary occurs at frame rows - window rows
+	sub		$s4, $s4, $s2		# minus offset
+	mul  	$t8, $s4, $s7		# t8 becomes the total number of addresses for s4 # of rows
+	sub		$s4, $s4, $t0		# final boundary is $t0(current address) - total offset addresses
+	
+vert_uloop:	
+	jal 	sad_calc			# calculate the SAD for current window
+	beq		$t0, $s4, horiz_rt	# when final calc has occured move to next direction
+	sub		$t0, $t0, $s7		# move up one step
+	ja		vert_dloop			# do it again	
+	
+	
+sad_calc:
+	
+
+	
+	
+	
+	
+	
+	
+	
