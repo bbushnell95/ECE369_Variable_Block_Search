@@ -780,14 +780,15 @@ vbsme:
     # insert your code here
 	
 	# $a0 = base address of parameters  |   $a1 base of frame [0,0]    |   $a2   base of window [0,0]
-	# $s0 = running sum
+	# $s0 = minimum sum found
 	# $s1 = horiz offset  |   $s2 vertical offset   
 	# $s3 frame cols - window cols - offset   |   $s4 frame rows - window rows - offset
 	# $s5 = window cols   |    $s6 = window rows
 	# $s7 = #cols * 4 (used to go down one element) 
 	# $t0 = base address of moving window
-	# $t1 = counter variable  | $t7 is boundary conditional
+	# $t1 - $t7 used for SAD calc
 	# $t8 / $t9  = temp vars
+	
 	
 	# can we calculate the last element with 100% confidence?
 	# high and low element div2 gives middle, need to round up or down?
@@ -808,7 +809,7 @@ initialize:
 	ja		match_case			# should only reach this if the frame and window are exact match
 
 traverse:
-	add		$s7, $s5, 0			# set s7 to a vertical increment value
+	add		$s7, $s3, 0			# set s7 to a vertical increment value equal to how many columns total
 	sll 	$s7, $s7, 2			# s7 now contains the amount of address to skip in order to go down 1 vertically
 # first pass to the right is a special case, it should not increment offset on completion
 	lw 		$s3, 4($a0)			# load the number of cols in given frame
@@ -835,7 +836,7 @@ horiz_rloop:
 vert_dn:
 	lw 		$s4, 0($a0)			# load the number of rows in given frame
 	sub 	$s4, $s4, $s6		# bottom boundary occurs at frame rows - window rows
-	sub		$s4, $s4, $s2		# minus offset
+	sub		$s4, $s4, $s2		# minus offset (this is now the raw rows needed... not addresses)
 	mul  	$s4, $s4, $s7		# s4 becomes the total number of addresses for s4 # of rows
 	add		$s4, $s4, $t0		# final boundary is $t0(current address) + total offset addresses
 	beq		$s4, $t0, finished	# if s4 = t0 then everything has been checked
@@ -863,8 +864,8 @@ horiz_lloop:
 vert_up:
 	lw 		$s4, 0($a0)			# load the number of rows in given frame
 	sub 	$s4, $s4, $s6		# upper boundary occurs at frame rows - window rows
-	sub		$s4, $s4, $s2		# minus offset
-	mul  	$t8, $s4, $s7		# t8 becomes the total number of addresses for s4 # of rows
+	sub		$s4, $s4, $s2		# minus offset (this is raw rows not addresses yet)
+	mul  	$s4, $s4, $s7		# t8 becomes the total number of addresses for s4 # of rows
 	sub		$s4, $s4, $t0		# final boundary is $t0(current address) - total offset addresses
 	beq		$s4, $t0, finished	# if s4 = t0 then everything has been checked
 	addi	$s2, $s2, 1			# increment vert offset value
@@ -876,6 +877,41 @@ vert_uloop:
 	
 	
 sad_calc:
+	# coming into sad_calc t0 will be the top left element of the window
+	# s5 is window col size and s6 is window row size
+	# each vertical movement will be by the amount stored in s7
+	# need to check left to right from t0 -> t0+4*s5
+	# need to check top to bottom by t0, t0+s7, t0+2*s7, .... , t0+s6*s7 
+	
+	# set initial boundaries
+	sll 	$t4, $s5, 2			# how many addresses to right is the boundary
+	add 	$t4, $t4, $t0		# set t4 to the address of right boundary
+	mul		$t5, $s6, $s7		# total addresses to go down s6* rows
+	add 	$t5, $t5, $t0		# set t5 to the address of the bottom boundary
+	add 	$t2, $t0, $0		# init t2 to first address in the window
+	add 	$t1, $0, $0			# reset $t1 back to 0 for each successive calculation
+sad_loop:
+	# t1 current sum, t2 current elements address, t3 value in current element, t4 right boundary, t5 bottom boundary
+	lw 		$t3, 0($t2)			# load value 	
+	add		$t1, $t1, $t3		# running sum
+	beq		$t2, $t4, next_row	# end of current row has been summed
+	addi	$t2, $t2, 4			# increment t2 to next sequential address
+	ja		sad_loop
+next_row:
+	addi	$t7, $t7, 1			# number of columns completed out of the window
+	mul		$t8, $t7, $s7		# find how many rows from base address and mult by addresses per row
+	add		$t2, $t0, $t8		# set $t2 and return to sad_loop
+	bne		$t7, $s6, sad_loop	# if rows completed does not equal total rows head back to sad_loop
+	slt 	$t6, $t1, $s0		# if new sum is less than old best sum t6 = 1
+	bne 	$t6, $0, new_best	
+	jr							# if sum is not a new best then go back to where sad_calc was called
+	
+new_best:
+	add		$s0, $t1, $0		# set current best sum 
+	# need to set v0 and v1 to array position
+	jr							# return to where sad_calc was called
+	
+	
 	
 
 	
@@ -883,6 +919,7 @@ match_case:
 	add		$v0, $0, $0			# this case only applies when the frame size matches the window size
 	add 	$v1, $0, $0			# in which only one solution would work [0,0]
 	
-	
+finished: 
+	#all done? need anything here? 
 	
 	
