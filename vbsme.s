@@ -785,7 +785,6 @@ sad:
     addi $t6, $0, 1 # t6 to 1 (window width counter)
     add $s1, $a1, $0 # set s1 to first element of frame array
     add $s2, $a2, $0 # set s2 to first element of window array
-    lw $s3, 0($a0) # set s3 to frame length
     lw $s4, 4($a0) # set s4 to frame width
     lw $s5, 8($a0) # set s5 to window length
     lw $s6, 12($a0) # set s6 to window width
