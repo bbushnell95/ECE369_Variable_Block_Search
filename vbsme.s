@@ -782,20 +782,24 @@ vbsme:
 #SAD calculation
 sad:
     add $t0, $0, $0	# set $t0 = 0 ($t0 is running sum)
-    addi $t5, $0, 1 # t5 to 1 (window length counter)
     addi $t6, $0, 1 # t6 to 1 (window width counter)
-    addi $s0, $0, 1 # s0 to 1 (frame length counter)
-    addi $s7, $0, 1 # s7 to 1 (frame width counter)
     add $s1, $a1, $0 # set s1 to first element of frame array
     add $s2, $a2, $0 # set s2 to first element of window array
     lw $s3, 0($a0) # set s3 to frame length
     lw $s4, 4($a0) # set s4 to frame width
     lw $s5, 8($a0) # set s5 to window length
     lw $s6, 12($a0) # set s6 to window width
+    mul $t7, $s6, $s5 # window length * window width
+    mul $t7, $t7, 4 # number of elements in window * 4
+    addi $t7, $t7, -4 # number to add to first address of window to get last address of window
+    add $t7, $t7, $a2 # last address of window
+    sub $t8, $s4, $s6 # frame length - window length
+    addi $t8, $t8, 1 # $t8 = $t8 + 1
+    mul $t8, $t8, 4 # $t8 = $t8 * 4 (number of addresses to skip to get corresponding value of frame to window for sad)
 
 sloop:
-    lw $t1, 0($s1) # get value at address
-    lw $t2, 0($s2)
+    lw $t1, 0($s1) # get value at address for frame
+    lw $t2, 0($s2) # get value at address for window
     sub $t3, $t2, $t1  # $t3 = $t2 - $t1
     slt $t4, $t3, $zero # is $t3 < 0 ?
     beq $t4, $zero, positive # if $t3 positive, move on
@@ -806,15 +810,23 @@ positive:
 	add $t0, $t0, $t3 # $t0 = $t0 + $t3
 	#increment addresses
 	# If reach end of window width (a0[3]) we want to move frame_width (a0[1]) * 4 addresses, unless we are also at end of window length (a0[2])
-	# beq $t6, $s6, max_win_width # are we at the end of the window width? 
-	addi $s1, $s1, 4
-	addi $s2, $s2, 4
+	beq $t6, $s6, max_win_width # are we at the end of the window width? 
+	addi $s2, $s2, 4 # Move to next address of window
+	addi $s1, $s1, 4 # Move to next address of frame
+	addi $t6, $t6, 1 # increment counter
 	j sloop
 
-# max_win_width:
-# 	addi $t6, $0, 1 # Reset window width counter
-# 	lw $s
+max_win_width:
+	addi $t6, $0, 1 # Reset window width counter
+	beq $s2, $t7, last_win_address # is address of $s2 the last address of the window
+	addi $s2, $s2, 4 # Go to next address of window
+	add $s1, $s1, $t8 # Move to next row in frame that fits in window
+	j sloop  
 
+ 	
+last_win_address:
+	add $s2, $a2, $0 # $s2 = first address of window
+	j sad # Return to loop
 
 
 
