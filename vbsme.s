@@ -800,7 +800,7 @@ vbsme:
 	# traversal routine
 initialize:
 	add 	$t0, $a1, $0		# init the moving window register to top left of given frame	
-	addi	$s0, $s0, -1		# initialize SAD comparison to largest number
+	addi	$s0, $0, -1		# initialize SAD comparison to largest number
 	srl		$s0, $s0, 1
 	add 	$s1, $0, $0			# horiz offset initially 0
 	add 	$s2, $0, $0			# vert offset initially 0
@@ -887,7 +887,7 @@ vert_uloop:
 	jal 	sad_calc			# calculate the SAD for current window
 	beq		$t0, $s3, horiz_rt	# when final calc has occured move to next direction
 	sub		$t0, $t0, $s7		# move up one step
-	addi	$t9, $t9, -1			# decrement array index for y
+	addi	$t9, $t9, -1		# decrement array index for y
 	j		vert_uloop			# do it again	
 	
 	
@@ -907,15 +907,15 @@ sad_calc:
 	add 	$t5, $t5, $t0		# set t5 to the address of the bottom boundary
 	add 	$t2, $t0, $0		# init t2 to first address in the window
 	add 	$t1, $0, $0			# reset $t1 back to 0 for each successive calculation
-	add		$t7, $s6, $0		# set number of cols to process
+	add		$t7, $s6, $0		# set number of rows to process
 	add 	$s5, $a2, $0		# set s5 to windows address to begin comparisons
 sad_loop:
 	# t1 current sum, t2 current elements address, t3 value in current element, t4 right boundary, t5 bottom boundary
 	# using s5 and s6 to run through the window
 	# using t2 and t3 to run through the frame
 	# t6 is a temp used variously
-	lw 		$t3, 0($t2)			# load value 
-	lw 		$s6, 0($s5)			# load value 2
+	lw 		$t3, 0($t2)			# load value 1		-frame
+	lw 		$s6, 0($s5)			# load value 2		-window
 	sub 	$t6, $t3, $s6		# difference between frame and window
 	slt 	$s4, $t6, $0		# set if negative
 	beq		$s4, $0, sum_pos	# if already positive go to sum
