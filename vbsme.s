@@ -916,8 +916,8 @@ sad_loop:
 	# t6 is a temp used variously
 	lw 		$t3, 0($t2)			# load value 
 	lw 		$s6, 0($s5)			# load value 2
-	sub 	$t6, $t2, $s6		# difference between frame and window
-	slti 	$s3, $t6, 0			# set if negative
+	sub 	$t6, $t3, $s6		# difference between frame and window
+	slt 	$s3, $t6, $0		# set if negative
 	beq		$s3, $0, sum_pos	# if negative go make it positive
 	sub		$t6, $0, $t6		# subtract from 0 to make pos
 sum_pos:	
@@ -930,7 +930,7 @@ sum_pos:
 next_row:
 	addi	$t7, $t7, -1		# number of rows left to compute out of the window
 	mul		$t6, $t7, $s7		# find how many rows from base address and mult by addresses per row
-	add		$t2, $t0, $t6		# set $t2 and return to sad_loop
+	sub		$t2, $t5, $t6		# set $t2 and return to sad_loop
 	add 	$t4, $t4, $s7		# increase right boundary address to correct row
 	bne		$t7, $0, sad_loop	# if rows completed does not equal total rows head back to sad_loop
 	slt 	$t6, $t1, $s0		# if new sum is less than old best sum t6 = 1
