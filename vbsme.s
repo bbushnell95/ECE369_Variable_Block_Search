@@ -785,7 +785,7 @@ vbsme:
 	# $a0 = base address of parameters  |   $a1 base of frame [0,0]    |   $a2   base of window [0,0]
 	# $s0 = minimum sum found
 	# $s1 = horiz offset  |   $s2 vertical offset   
-	# $s3/s4 boundary parameters and used for difference calculations in sad
+	# $s3 = boundary parameters    |    s4 = used for difference calculations in sad
 	# $s5/s6 window paramaters and used in sad calc
 	# $s7 = #cols * 4 (used to go down one element) 
 	# $t0 = base address of moving window
@@ -843,17 +843,17 @@ horiz_rloop:
 	j		horiz_rloop			# do it again
 	
 vert_dn:
-	lw 		$s4, 0($a0)			# load the number of rows in given frame
+	lw 		$s3, 0($a0)			# load the number of rows in given frame
 	lw		$s6, 8($a0)			# load the number of rows in given window
-	sub 	$s4, $s4, $s6		# bottom boundary occurs at frame rows - window rows
-	sub		$s4, $s4, $s2		# minus offset (this is now the raw rows needed... not addresses)
-	mul  	$s4, $s4, $s7		# s4 becomes the total number of addresses for s4 # of rows
-	add		$s4, $s4, $t0		# final boundary is $t0(current address) + total offset addresses
-	beq		$s4, $t0, finished	# if s4 = t0 then everything has been checked
+	sub 	$s3, $s3, $s6		# bottom boundary occurs at frame rows - window rows
+	sub		$s3, $s3, $s2		# minus offset (this is now the raw rows needed... not addresses)
+	mul  	$s3, $s3, $s7		# s4 becomes the total number of addresses for s4 # of rows
+	add		$s3, $s3, $t0		# final boundary is $t0(current address) + total offset addresses
+	beq		$s3, $t0, finished	# if s4 = t0 then everything has been checked
 	addi	$s2, $s2, 1			# increment vert offset value
 vert_dloop:	
 	jal 	sad_calc			# calculate the SAD for current window
-	beq		$t0, $s4, horiz_lt	# when final calc has occured move to next direction
+	beq		$t0, $s3, horiz_lt	# when final calc has occured move to next direction
 	add		$t0, $t0, $s7		# move down one step
 	addi	$t9, $t9, 1			# increment array index for y
 	j		vert_dloop			# do it again
@@ -875,17 +875,17 @@ horiz_lloop:
 	j		horiz_rloop			# do it again
 	
 vert_up:
-	lw 		$s4, 0($a0)			# load the number of rows in given frame
+	lw 		$s3, 0($a0)			# load the number of rows in given frame
 	lw		$s6, 8($a0)			# load the number of rows in given window
-	sub 	$s4, $s4, $s6		# upper boundary occurs at frame rows - window rows
-	sub		$s4, $s4, $s2		# minus offset (this is raw rows not addresses yet)
-	mul  	$s4, $s4, $s7		# s4 becomes the total number of addresses for s4 # of rows
-	sub		$s4, $s4, $t0		# final boundary is $t0(current address) - total offset addresses
-	beq		$s4, $t0, finished	# if s4 = t0 then everything has been checked
+	sub 	$s3, $s3, $s6		# upper boundary occurs at frame rows - window rows
+	sub		$s3, $s3, $s2		# minus offset (this is raw rows not addresses yet)
+	mul  	$s3, $s3, $s7		# s4 becomes the total number of addresses for s4 # of rows
+	sub		$s3, $s3, $t0		# final boundary is $t0(current address) - total offset addresses
+	beq		$s3, $t0, finished	# if s4 = t0 then everything has been checked
 	addi	$s2, $s2, 1			# increment vert offset value
 vert_uloop:	
 	jal 	sad_calc			# calculate the SAD for current window
-	beq		$t0, $s4, horiz_rt	# when final calc has occured move to next direction
+	beq		$t0, $s3, horiz_rt	# when final calc has occured move to next direction
 	sub		$t0, $t0, $s7		# move up one step
 	addi	$t9, $t9, 1			# decrement array index for y
 	j		vert_dloop			# do it again	
@@ -917,8 +917,8 @@ sad_loop:
 	lw 		$t3, 0($t2)			# load value 
 	lw 		$s6, 0($s5)			# load value 2
 	sub 	$t6, $t3, $s6		# difference between frame and window
-	slt 	$s3, $t6, $0		# set if negative
-	beq		$s3, $0, sum_pos	# if negative go make it positive
+	slt 	$s4, $t6, $0		# set if negative
+	beq		$s4, $0, sum_pos	# if negative go make it positive
 	sub		$t6, $0, $t6		# subtract from 0 to make pos
 sum_pos:	
 	add		$t1, $t1, $t6		# running sum
