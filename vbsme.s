@@ -799,7 +799,7 @@ vbsme:
 	
 	# traversal routine
 initialize:
-	add 	$t0, $a1, $0		# init the moving window register to top left of given frame
+	add 	$t0, $a1, $0		# init the moving window register to top left of given frame	
 	addi	$s0, $s0, -1		# initialize SAD comparison to largest number
 	srl		$s0, $s0, 1
 	add 	$s1, $0, $0			# horiz offset initially 0
@@ -831,9 +831,9 @@ horiz_rt:
 	lw		$s5, 12($a0)		# load the number of cols in given window
 	sub 	$s3, $s3, $s5		# right boundary occurs at frame cols - window cols
 	sub		$s3, $s3, $s1		# minus offset
+	beq		$s3, $0, finished	# if s3 = t0 then everything has been checked
 	sll		$s3, $s3, 2			# x4 for addressing
 	add 	$s3, $s3, $t0		# set boundary to rightmost desired address
-	beq		$s3, $t0, finished	# if s3 = t0 then everything has been checked
 	addi	$s1, $s1, 1			# increment horiz offset value
 horiz_rloop:
 	jal 	sad_calc			# calculate the SAD for current window
@@ -847,9 +847,9 @@ vert_dn:
 	lw		$s6, 8($a0)			# load the number of rows in given window
 	sub 	$s3, $s3, $s6		# bottom boundary occurs at frame rows - window rows
 	sub		$s3, $s3, $s2		# minus offset (this is now the raw rows needed... not addresses)
-	mul  	$s3, $s3, $s7		# s4 becomes the total number of addresses for s4 # of rows
+	beq		$s3, $0, finished	# if s3 = 0 then everything has been checked
+	mul  	$s3, $s3, $s7		# s3 becomes the total number of addresses for s3 # of rows
 	add		$s3, $s3, $t0		# final boundary is $t0(current address) + total offset addresses
-	beq		$s3, $t0, finished	# if s4 = t0 then everything has been checked
 	addi	$s2, $s2, 1			# increment vert offset value
 vert_dloop:	
 	jal 	sad_calc			# calculate the SAD for current window
@@ -863,32 +863,32 @@ horiz_lt:
 	lw		$s5, 12($a0)		# load the number of cols in given window
 	sub 	$s3, $s3, $s5		# left boundary occurs at frame cols - window cols
 	sub		$s3, $s3, $s1		# minus offset
+	beq		$s3, $0, finished	# if s3 = 0 then everything has been checked
 	sll		$s3, $s3, 2			# x4 for addressing
-	sub 	$s3, $s3, $t0		# set boundary to leftmost desired address
-	beq		$s3, $t0, finished	# if s3 = t0 then everything has been checked
+	sub 	$s3, $t0, $s3		# set boundary to leftmost desired address
 	addi	$s1, $s1, 1			# increment horiz offset value
 horiz_lloop:
 	jal 	sad_calc			# calculate the SAD for current window
 	beq		$t0, $s3, vert_up	# when final calc has occured move to next direction   
 	addi	$t0, $t0, -4		# move left one step
 	addi	$t8, $t8, -1		# decrement array index for x
-	j		horiz_rloop			# do it again
+	j		horiz_lloop			# do it again
 	
 vert_up:
 	lw 		$s3, 0($a0)			# load the number of rows in given frame
 	lw		$s6, 8($a0)			# load the number of rows in given window
 	sub 	$s3, $s3, $s6		# upper boundary occurs at frame rows - window rows
 	sub		$s3, $s3, $s2		# minus offset (this is raw rows not addresses yet)
-	mul  	$s3, $s3, $s7		# s4 becomes the total number of addresses for s4 # of rows
-	sub		$s3, $s3, $t0		# final boundary is $t0(current address) - total offset addresses
-	beq		$s3, $t0, finished	# if s4 = t0 then everything has been checked
+	beq		$s3, $0, finished	# if s3 = 0 then everything has been checked
+	mul  	$s3, $s3, $s7		# s3 becomes the total number of addresses for s3 # of rows
+	sub		$s3, $t0, $s3		# final boundary is $t0(current address) - total offset addresses
 	addi	$s2, $s2, 1			# increment vert offset value
 vert_uloop:	
 	jal 	sad_calc			# calculate the SAD for current window
 	beq		$t0, $s3, horiz_rt	# when final calc has occured move to next direction
 	sub		$t0, $t0, $s7		# move up one step
-	addi	$t9, $t9, 1			# decrement array index for y
-	j		vert_dloop			# do it again	
+	addi	$t9, $t9, -1			# decrement array index for y
+	j		vert_uloop			# do it again	
 	
 	
 sad_calc:
@@ -924,9 +924,8 @@ sum_pos:
 	add		$t1, $t1, $t6		# running sum
 	beq		$t2, $t4, next_row	# end of current row has been summed
 	addi	$t2, $t2, 4			# increment t2 to next sequential address		- in frame
-	addi	$t6, $t6, 4			# increment t6 to next sequential address		- in window
+	addi	$s5, $s5, 4			# increment s5 to next sequential address		- in window
 	j		sad_loop
-	
 next_row:
 	addi	$t7, $t7, -1		# number of rows left to compute out of the window
 	mul		$t6, $t7, $s7		# find how many rows from base address and mult by addresses per row
@@ -950,6 +949,6 @@ finished:
     lw      $ra, 0($sp)         # Restore return address
     addi    $sp, $sp, 4         # Restore stack pointer
 	jr		$ra
-	#all done? need anything here? 
+ 
 	
 	
