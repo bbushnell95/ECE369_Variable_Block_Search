@@ -1,5 +1,6 @@
 #  Team Members:    
-#  % Effort    :   
+#  % Effort    :   		Derek McMullen - 50%
+#						Brett Bushnell - 50%
 #
 # ECE369A,  
 # 
