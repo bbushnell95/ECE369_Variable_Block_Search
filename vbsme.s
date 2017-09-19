@@ -903,6 +903,7 @@ sad_calc:
 	lw		$s6, 8($a0)			# load the number of rows in given window
 	sll 	$t4, $s5, 2			# how many addresses to right is the boundary
 	add 	$t4, $t4, $t0		# set t4 to the address of right boundary
+	addi 	$t4, $t4, -4		# need to reduce right boundary by 1 element
 	mul		$t5, $s6, $s7		# total addresses to go down s6* rows
 	add 	$t5, $t5, $t0		# set t5 to the address of the bottom boundary
 	add 	$t2, $t0, $0		# init t2 to first address in the window
@@ -930,6 +931,7 @@ next_row:
 	addi	$t7, $t7, -1		# number of rows left to compute out of the window
 	mul		$t6, $t7, $s7		# find how many rows from base address and mult by addresses per row
 	sub		$t2, $t5, $t6		# set $t2 to lower boundary minus how many addresses total
+	addi	$s5, $s5, 4			# increment $s5 to new row as well
 	add 	$t4, $t4, $s7		# increase right boundary address to correct row
 	bne		$t7, $0, sad_loop	# if there are still rows remaining head back to sad_loop
 	slt 	$t6, $t1, $s0		# if new sum is less than old best sum t6 = 1
@@ -937,8 +939,8 @@ next_row:
 	jr		$ra					# if sum is not a new best then go back to where sad_calc was called
 new_best:
 	add		$s0, $t1, $0		# set current best sum 
-	add		$v0, $t8, $0		# set output x to current window location
-	add		$v1, $t9, $0		# set output y to current window location
+	add		$v0, $t9, $0		# set output x to current window location
+	add		$v1, $t8, $0		# set output y to current window location
 	jr		$ra					# return to where sad_calc was called
 	
 match_case:
